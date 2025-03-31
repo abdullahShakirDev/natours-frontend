@@ -4,6 +4,17 @@ import tourDetails from '@/views/tourDetails.vue'
 import login from '@/views/login.vue';
 import signup from '@/views/signup.vue'
 import me from "@/views/me.vue";
+import {useAuthStore} from "@/stores/authStore.js";
+
+
+const authGuard = (to, from, next) => {
+    const authStore = useAuthStore()
+    if (!authStore.token) {
+        return next('/login');
+    } else {
+        next();
+    }
+}
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +44,7 @@ const router = createRouter({
             path: '/me/:userId',
             name: 'Me',
             component: me,
+            beforeEnter: authGuard
         }
 
     ],
