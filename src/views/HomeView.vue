@@ -1,13 +1,13 @@
 <template>
   <main>
     <!-- HEADER -->
-    <headerVue />
+    <headerVue/>
     <!-- HEADER -->
 
-    <overview />
+    <overview/>
 
     <!-- FOOTER -->
-    <footerVue />
+    <footerVue/>
     <!-- FOOTER -->
   </main>
 </template>

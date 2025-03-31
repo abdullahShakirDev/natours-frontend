@@ -1,97 +1,34 @@
 <template>
   <Header/>
+  <div v-if="error">
+    <HandleError :error="error"/>
+  </div>
   <main class="main">
     <div class="user-view">
       <nav class="user-view__menu">
-        <ul class="side-nav">
-          <li :class="{ 'side-nav--active': activeTab === 'settings' }">
-            <a href="#" @click.prevent="setActiveTab('settings')">
-              <svg>
-                <use xlink:href="../assets/img/icons.svg#icon-settings"></use>
-              </svg>
-              Settings
-            </a>
-          </li>
-          <li>
-            <a href="#">
-              <svg>
-                <use xlink:href="../assets/img/icons.svg#icon-briefcase"></use>
-              </svg>
-              My bookings
-            </a>
-          </li>
-          <li>
-            <a href="#">
-              <svg>
-                <use xlink:href="../assets/img/icons.svg#icon-star"></use>
-              </svg>
-              My reviews
-            </a>
-          </li>
-          <li>
-            <a href="#">
-              <svg>
-                <use xlink:href="../assets/img/icons.svg#icon-credit-card"></use>
-              </svg>
-              Billing
-            </a>
-          </li>
-        </ul>
-
-        <div v-if="user.role === 'admin'" class="admin-nav">
-          <h5 class="admin-nav__heading">Admin</h5>
-          <ul class="side-nav">
-            <li>
-              <a href="#">
-                <svg>
-                  <use xlink:href="../assets/img/icons.svg#icon-map"></use>
-                </svg>
-                Manage tours
-              </a>
-            </li>
-            <li>
-              <a href="#">
-                <svg>
-                  <use xlink:href="../assets/img/icons.svg#icon-users"></use>
-                </svg>
-                Manage users
-              </a>
-            </li>
-            <li>
-              <a href="#">
-                <svg>
-                  <use xlink:href="../assets/img/icons.svg#icon-star"></use>
-                </svg>
-                Manage reviews
-              </a>
-            </li>
-            <li>
-              <a href="#">
-                <svg>
-                  <use xlink:href="../assets/img/icons.svg#icon-briefcase"></use>
-                </svg>
-                Manage bookings
-              </a>
-            </li>
-          </ul>
-        </div>
+        <!-- UserSideNav -->
+        <userSideNav/>
+        <!-- UserSideNav -->
+        <!-- ADMIN DASHBOARD -->
+        <adminDashboard :user="user"/>
+        <!-- ADMIN DASHBOARD -->
       </nav>
-
       <div class="user-view__content">
         <div class="user-view__form-container">
           <h2 class="heading-secondary ma-bt-md">Your account settings</h2>
           <form class="form form-user-data" @submit.prevent="saveSettings">
             <div class="form__group">
               <label class="form__label" for="name">Name</label>
-              <input id="name" class="form__input" type="text" v-model="user.name" required>
+              <input id="name" class="form__input" type="text" v-model="name" required>
             </div>
             <div class="form__group ma-bt-md">
               <label class="form__label" for="email">Email address</label>
-              <input id="email" class="form__input" type="email" v-model="user.email" required>
+              <input id="email" class="form__input" type="email" v-model="email" required>
             </div>
             <div class="form__group form__photo-upload">
               <img class="form__user-photo" src="../assets/img/users/default.jpg" alt="User photo">
-              <a class="btn-text" href="#">Choose new photo</a>
+              <input type="file" placeholder="Upload an image!" @change="handleFileUpload"
+                     accept="image/*">
             </div>
             <div class="form__group right">
               <button class="btn btn--small btn--green" type="submit">Save settings</button>
@@ -103,18 +40,20 @@
 
         <div class="user-view__form-container">
           <h2 class="heading-secondary ma-bt-md">Password change</h2>
-          <form class="form form-user-password" @submit.prevent="changePassword">
+          <form class="form form-user-password" @submit.prevent="handleChangePassword">
             <div class="form__group">
               <label class="form__label" for="password-current">Current password</label>
-              <input id="password-current" class="form__input" type="password" v-model="password.current" required minlength="8">
+              <input id="password-current" class="form__input" type="password" v-model="currentPassword" required
+                     minlength="8">
             </div>
             <div class="form__group">
               <label class="form__label" for="password">New password</label>
-              <input id="password" class="form__input" type="password" v-model="password.new" required minlength="8">
+              <input id="password-new" class="form__input" type="password" v-model="newPassword" required minlength="8">
             </div>
             <div class="form__group ma-bt-lg">
               <label class="form__label" for="password-confirm">Confirm password</label>
-              <input id="password-confirm" class="form__input" type="password" v-model="password.confirm" required minlength="8">
+              <input id="password-confirm" class="form__input" type="password" v-model="confirmPassword" required
+                     minlength="8">
             </div>
             <div class="form__group right">
               <button class="btn btn--small btn--green btn--save-password" type="submit">Save password</button>
@@ -128,32 +67,61 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import {ref} from 'vue';
 import {useAuthStore} from "@/stores/authStore.js";
 import Header from "@/components/header.vue";
+import Footer from "@/components/footer.vue";
+import adminDashboard from "@/components/adminDashboard.vue";
+import userSideNav from "@/components/userSideNav.vue"
+import HandleError from "@/components/handleError.vue"
+import {updateUserInfo} from "@/server/updateUserInfo"
+import {useChangePassword} from "@/server/useChangePassword.js";
 
-const user = useAuthStore().user
-    const activeTab = ref('settings');
-    const password = ref({
-      current: '',
-      new: '',
-      confirm: ''
-    });
+const {error, updateUser} = updateUserInfo()
+const {error: error2, changePassword} = useChangePassword()
+const user = useAuthStore().user;
+const name = ref('');
+const email = ref('');
+const selectedFile = ref(null);
 
-    const setActiveTab = (tab) => {
-      activeTab.value = tab;
-    };
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    selectedFile.value = file;
+  }
+};
 
-    const saveSettings = () => {
-      console.log("Settings saved", user.value);
-    };
+const currentPassword = ref('');
+const newPassword = ref('');
+const confirmPassword = ref('');
 
-    const changePassword = () => {
-      console.log("Password changed", password.value);
-    };
+
+const saveSettings = async () => {
+
+  await updateUser(name.value, email.value, selectedFile.value || null);
+
+  if (!error.value) {
+    setTimeout(() => {
+      window.location.reload();
+      name.value = '';
+      email.value = '';
+      selectedFile.value = null;
+    }, 1500);
+  }
+};
+
+const handleChangePassword = async () => {
+  await changePassword(currentPassword.value, newPassword.value, confirmPassword.value);
+  if (!error2.value) {
+    setTimeout(() => {
+      currentPassword.value = '';
+      newPassword.value = '';
+      confirmPassword.value = '';
+      window.location.reload();
+    }, 1500);
+  }
+  console.log(error2.value);
+
+};
 
 </script>
-
-<style scoped>
-/* Add your styles here */
-</style>
